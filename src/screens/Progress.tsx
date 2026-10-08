@@ -2,6 +2,8 @@ import { format } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { useData, FALLBACK_COLOR } from '../data';
 import { Segmented } from '../components/Segmented';
+import { TaskMonthSheet } from '../components/TaskMonthSheet';
+import { IconRight } from '../components/Icons';
 import { fromKey, keysBetween, shiftKey, weekStartOf, WEEKDAY_LETTER } from '../lib/dates';
 import { categoryStats, rangeProgress, ratio, streak, sumProgress, dayProgress } from '../lib/stats';
 
@@ -19,6 +21,8 @@ function heatColor(r: number, total: number) {
 export function Progress() {
   const { tasks, categories, catMap, done, today, settings } = useData();
   const [range, setRange] = useState<'7' | '30'>('7');
+  const [detailId, setDetailId] = useState<string>();
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const last30 = useMemo(() => rangeProgress(tasks, done, today, 30), [tasks, done, today]);
   const last7 = last30.slice(-7);
@@ -136,10 +140,20 @@ export function Progress() {
       </div>
 
       <div className="card">
-        <h3 className="card-title">Streaks</h3>
+        <div className="row" style={{ marginBottom: 4 }}>
+          <h3 className="card-title" style={{ margin: 0, flex: 1 }}>Habits & routines</h3>
+          {streaks.length > 0 && <span className="note">Tap for monthly view</span>}
+        </div>
         {streaks.length === 0 && <p className="note">Add a daily habit or weekly task to start a streak.</p>}
         {streaks.map(({ t, s }) => (
-          <div className="streak-row" key={t.id}>
+          <button
+            className="streak-row"
+            key={t.id}
+            onClick={() => {
+              setDetailId(t.id);
+              setDetailOpen(true);
+            }}
+          >
             <span className="color-dot" style={{ ['--cat' as string]: (t.categoryId && catMap.get(t.categoryId)?.color) || FALLBACK_COLOR }} />
             <span className="name">{t.title}</span>
             <span className={`cur ${s.current > 0 ? 'grad-text' : ''}`} style={{ color: s.current ? undefined : 'var(--faint)' }}>
@@ -147,7 +161,8 @@ export function Progress() {
               {s.current}
             </span>
             <span className="best">best {s.best}</span>
-          </div>
+            <IconRight width={16} height={16} style={{ color: 'var(--faint)', flex: 'none' }} />
+          </button>
         ))}
       </div>
 
@@ -170,6 +185,8 @@ export function Progress() {
           </div>
         ))}
       </div>
+
+      <TaskMonthSheet open={detailOpen} task={tasks.find((t) => t.id === detailId)} onClose={() => setDetailOpen(false)} />
     </>
   );
 }

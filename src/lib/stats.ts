@@ -98,3 +98,30 @@ export function categoryStats(
   }
   return [...map.values()].filter((s) => s.total > 0);
 }
+
+export type DayStatus = 'done' | 'missed' | 'today' | 'upcoming' | 'off' | 'inactive';
+
+/** How a single day looks for one task in its monthly calendar. */
+export function dayStatus(task: Task, done: DoneSet, day: DayKey, today: DayKey): DayStatus {
+  const active = day >= task.createdAt && !(task.archivedAt && day >= task.archivedAt);
+  if (task.kind !== 'once' && !active) return 'inactive';
+  if (isDone(done, task.id, day)) return 'done';
+  if (!isScheduled(task, day)) return 'off';
+  if (day > today) return 'upcoming';
+  if (day === today) return 'today';
+  return 'missed';
+}
+
+/** Totals over the given days, counting only scheduled days up to today. */
+export function periodSummary(task: Task, done: DoneSet, days: DayKey[], today: DayKey) {
+  let scheduled = 0;
+  let completed = 0;
+  for (const k of days) {
+    if (k > today || !isScheduled(task, k)) continue;
+    scheduled++;
+    if (isDone(done, task.id, k)) completed++;
+  }
+  // Today isn't "missed" until it's over.
+  const pendingToday = days.includes(today) && isScheduled(task, today) && !isDone(done, task.id, today) ? 1 : 0;
+  return { scheduled, done: completed, missed: scheduled - completed - pendingToday, total: scheduled };
+}

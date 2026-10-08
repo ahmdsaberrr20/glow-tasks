@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Category, Task } from '../db';
 import { isScheduled, tasksForDate } from './schedule';
-import { categoryStats, dayProgress, doneSet, streak } from './stats';
+import { categoryStats, dayProgress, dayStatus, doneSet, periodSummary, streak } from './stats';
 import { keysBetween, weekStartOf } from './dates';
 
 // 2026-10-05 is a Monday.
@@ -107,5 +107,26 @@ describe('dates', () => {
 
   it('keysBetween crosses month boundaries', () => {
     expect(keysBetween('2026-09-29', '2026-10-02')).toEqual(['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
+  });
+});
+
+describe('dayStatus / periodSummary', () => {
+  const t = task({ id: 'w', kind: 'weekly', weekdays: [1, 3], createdAt: MON });
+  const d = done([['w', MON]]);
+
+  it('classifies each day', () => {
+    expect(dayStatus(t, d, '2026-10-04', THU)).toBe('inactive'); // before created
+    expect(dayStatus(t, d, MON, THU)).toBe('done');
+    expect(dayStatus(t, d, TUE, THU)).toBe('off');
+    expect(dayStatus(t, d, WED, THU)).toBe('missed');
+    expect(dayStatus(t, d, '2026-10-12', THU)).toBe('upcoming');
+    expect(dayStatus(task({ id: 'h', createdAt: MON }), d, THU, THU)).toBe('today');
+  });
+
+  it('summarises scheduled days up to today without counting today as missed', () => {
+    const days = keysBetween('2026-10-01', '2026-10-31');
+    expect(periodSummary(t, d, days, THU)).toEqual({ scheduled: 2, done: 1, missed: 1, total: 2 });
+    const h = task({ id: 'h', createdAt: MON });
+    expect(periodSummary(h, done([['h', MON]]), days, THU)).toEqual({ scheduled: 4, done: 1, missed: 2, total: 4 });
   });
 });
