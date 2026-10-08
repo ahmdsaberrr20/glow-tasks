@@ -11,6 +11,7 @@ rm -rf .git
 git init -q -b gh-pages
 git add -A
 git commit -q -m "Deploy $(date '+%Y-%m-%d %H:%M')"
-git push -f "$REMOTE" gh-pages
+# Use the GitHub CLI login so a different account saved in the Keychain isn't picked up.
+git -c credential.helper= -c credential.helper='!gh auth git-credential' push -f "$REMOTE" gh-pages
 rm -rf .git
 echo "Deployed."
